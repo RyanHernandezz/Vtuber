@@ -4,7 +4,9 @@ A real-time VTuber avatar system that converts facial expressions into animated 
 
 ## Requirements
 
-- **Python 3.8 - 3.11** (Python 3.12+ not tested)
+- **Python 3.9 - 3.12** (tested on Python 3.12.7)
+  
+  **Note**: TensorFlow 2.15.0+ requires Python 3.9+. Python 3.8 is not supported by TensorFlow 2.15.0.
 - Webcam
 - Virtual environment (recommended)
 
