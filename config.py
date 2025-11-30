@@ -1,5 +1,5 @@
 DRAW_LANDMARKS = True
-CAM_INDEX = 0
+CAM_INDEX = 0  # Try 0, 1, or 2 if your camera doesn't work
 SMOOTHING_DT = 1.0 / 30.0
 EMOTION_FPS = 10
 USE_DEEPFACE = True
@@ -54,3 +54,41 @@ EMOTION_EXPRESSIONS = {
     'disgust': 'black.exp3.json',
     'neutral': None
 }
+
+# ============================================================================
+# ADVANCED TRACKING SETTINGS (Commercial-Grade Stability)
+# ============================================================================
+
+# Master toggle for advanced tracking features
+USE_ADVANCED_TRACKING = True  # Enable commercial-grade landmark tracking
+
+# Individual feature toggles (only apply if USE_ADVANCED_TRACKING = True)
+CONFIDENCE_WEIGHTING = True   # Use velocity-based confidence scoring
+OUTLIER_REJECTION = True      # Reject outlier landmark measurements
+VELOCITY_CLAMPING = True      # Clamp excessive velocities to prevent jitter
+REGION_SMOOTHING = True       # Apply region-based smoothing weights
+
+# Confidence weighting parameters
+MIN_CONFIDENCE = 0.1          # Minimum confidence value (0.0 to 1.0)
+VELOCITY_CONFIDENCE_SCALE = 0.05  # Lower = more sensitive to velocity changes
+
+# Outlier detection
+OUTLIER_THRESHOLD = 0.05      # Distance threshold for outlier detection (normalized coords)
+                              # Increase to reject fewer outliers, decrease to be more strict
+
+# Velocity clamping
+MAX_LANDMARK_VELOCITY = 0.1   # Maximum allowed velocity per frame (normalized coords)
+                              # Lower = smoother but less responsive, higher = more responsive
+
+# Region-based smoothing weights (0.0 = no smoothing, 1.0 = maximum smoothing)
+STABLE_REGION_WEIGHT = 0.8    # Strong smoothing for stable anchors (nose, inner eyes)
+MEDIUM_REGION_WEIGHT = 0.5    # Medium smoothing for cheeks and jaw root
+EXPRESSIVE_REGION_WEIGHT = 0.2  # Light smoothing for expressive features (lips, eyelids)
+
+# Kalman filter parameters for advanced tracking
+ADVANCED_KALMAN_Q = 1e-3      # Process noise (lower = trust model more)
+ADVANCED_KALMAN_R = 1e-2      # Measurement noise (lower = trust measurements more)
+
+# Debug output
+ADVANCED_TRACKING_DEBUG = False  # Print confidence scores and velocities
+ADVANCED_DEBUG_INTERVAL = 5.0    # Print debug info every N seconds

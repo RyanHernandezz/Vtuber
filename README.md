@@ -58,15 +58,30 @@ Vtuber/
 
 ## Features
 
-- Real-time face tracking using MediaPipe
+### Core Tracking
+- **Real-time face tracking** using MediaPipe (468 landmarks)
+- **Commercial-grade stability** with advanced Kalman filtering:
+  - Per-landmark confidence weighting based on velocity
+  - Region-based smoothing (stable anchors vs expressive features)
+  - Outlier detection and rejection
+  - Velocity clamping for jitter prevention
 - Eye aspect ratio (EAR) detection for blinking
 - Mouth aspect ratio (MAR) detection for mouth movement
 - Head pose estimation (yaw, pitch)
-- Emotion detection using DeepFace with neutral baseline calibration
-- Kalman filtering for smooth animations
-- Modern monochrome GUI with emotion-based accent colors
-- Automatic neutral face calibration for improved emotion accuracy
-- Animated emotion bars and expression indicators
+- Tongue detection for expressive animations
+
+### Emotion Detection
+- **DeepFace emotion recognition** with 7 emotions (happy, sad, angry, surprise, fear, disgust, neutral)
+- **Delta-based calibration** - your neutral face becomes the baseline
+- Emotions only appear after calibration is complete
+- Top 3 emotions displayed with real-time probabilities
+
+### User Interface
+- **Modern monochrome GUI** with emotion-based accent colors
+- **FPS counter** showing real-time performance
+- **Live video feed** with emotion-colored border
+- **Expression indicators** with percentage values (mouth, eyes, head pose)
+- **Calibration progress** with visual feedback
 - Frameless, always-on-top window with drag support
 
 ## Controls
@@ -135,26 +150,106 @@ To use VTube Studio integration:
 
 ## Neutral Calibration
 
-The system includes an automatic neutral baseline calibration system that improves emotion detection accuracy:
+The system uses **delta-based calibration** to personalize emotion detection:
 
-- **On startup**: The system performs a 2-second calibration phase where you should relax your face
-- **Baseline compensation**: DeepFace probabilities are adjusted by subtracting your personal neutral baseline
-- **Benefits**: Reduces false positives (e.g., "sad lock") by accounting for individual facial structure
-- **Configuration**: Can be disabled by setting `EMOTION_CALIBRATION_ENABLED = False` in `config.py`
+### How It Works
 
-During calibration, the system collects DeepFace emotion probabilities and computes a baseline distribution. After calibration, all emotion detections are adjusted relative to this baseline, so only deviations from your neutral expression are detected as emotions.
+1. **Click "Begin Calibration"** button in the GUI
+2. **3-second countdown** - get ready
+3. **2-second calibration phase** - relax your face and look at the camera
+   - Emotions **do not update** during this time
+   - Top 3 emotions show `--` (blank)
+4. **Baseline established** - your neutral face becomes the zero point
+5. **Emotions appear** - only deviations from YOUR neutral face are detected
+
+### Benefits
+- **Eliminates false positives** - no more "sad lock" if you have a naturally downturned mouth
+- **Personalized to you** - accounts for individual facial structure
+- **Delta-based detection** - only changes from your baseline are detected as emotions
+- **Formula**: `emotion = raw_detection - your_baseline`
+
+### Best Practices
+- Relax your face during calibration
+- Look directly at the camera
+- Don't smile or frown - just be natural
+- Recalibrate if lighting changes significantly
+
+**Configuration**: Can be disabled by setting `EMOTION_CALIBRATION_ENABLED = False` in `config.py`
 
 ## User Interface
 
 The application features a modern, minimal GUI built with PySide6:
 
+### Main Display
+- **FPS Counter**: Real-time frame rate display in title bar (color-coded: green/yellow/red)
 - **Video Display**: Live camera feed with soft vignette and emotion-colored border
-- **Emotion Bar**: Animated probability bar showing current dominant emotion
-- **Expression Indicators**: Monochrome bars for mouth, eyes, yaw, and pitch
-- **Calibration Widget**: Progress indicator during neutral calibration phase
-- **Theme**: Dark monochrome design with emotion-specific accent colors
+- **Emotion Label**: Large, clear current emotion display
+- **Top 3 Emotions**: Real-time probabilities with color-coded text
+  - Shows `--` before calibration is complete
+  - Updates only after neutral baseline is established
+
+### Expression Indicators
+- **Percentage values** next to each bar (e.g., "mouth 45%")
+- Clean white progress bars (no grey background)
+- Real-time updates for:
+  - Mouth opening
+  - Left/right eye opening
+  - Head yaw (left/right)
+  - Head pitch (up/down)
+
+### Calibration
+- **"Begin Calibration" button** - click to start
+- **Progress indicator** - shows calibration status
+- **Visual feedback** - countdown and progress bar
+
+### Theme
+- **Dark monochrome design** with emotion-specific accent colors
+- **Frameless window** - always on top, draggable
+- **Rounded corners** - modern, polished look
 
 The GUI replaces all console output with visual feedback. Debug information still prints to the console for troubleshooting.
+
+## Troubleshooting
+
+### Camera Not Opening / "Cannot open webcam" Error
+
+If you get a "Cannot open webcam" error or the GUI closes immediately, try these solutions in order:
+
+1. **Close VTube Studio** - VTube Studio often auto-starts with the camera enabled, which locks the webcam
+   - Either close VTube Studio completely before running this tracker
+   - Or disable "Start camera on launch" in VTube Studio settings
+   
+2. **Close other camera applications** - Check for:
+   - Zoom, Microsoft Teams, Skype
+   - OBS Studio (if using webcam source)
+   - Windows Camera app
+   - Any other video conferencing or streaming software
+
+3. **Try a different camera index** - If you have multiple cameras:
+   - Edit `config.py` and change `CAM_INDEX` from `0` to `1` or `2`
+   - The program will automatically try multiple indices, but setting the correct one helps
+
+4. **Check camera permissions**:
+   - Open Windows Settings → Privacy → Camera
+   - Make sure "Allow apps to access your camera" is enabled
+   - Ensure Python is allowed to use the camera
+
+5. **Test your camera** - Open the Windows Camera app to verify your webcam works
+
+### DeepFace Not Working
+
+If you see "WARNING: DeepFace is not working":
+- This is usually fine - the tracker will still work without emotion detection
+- DeepFace may download models on first run (requires internet connection)
+- Check that TensorFlow installed correctly: `pip install tensorflow`
+
+### VTube Studio Not Connecting
+
+If you see "Warning: Could not connect to VTube Studio":
+- Make sure VTube Studio is running
+- Enable API in VTube Studio: Settings → API → "Allow API connections"
+- Check that the port matches (default: 8001)
+- The tracker will still work without VTube Studio connection
 
 ## Notes
 
