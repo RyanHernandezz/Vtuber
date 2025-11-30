@@ -25,7 +25,7 @@
   - **Velocity clamping**: Limits maximum movement speed to prevent jitter
   - **Confidence-weighted Kalman gain**: Blends Kalman prediction with raw measurement based on confidence
 - **Coverage**: All 468 MediaPipe landmarks (936 filters total: X and Y per landmark)
-- **Performance**: ~2-5 FPS overhead for full landmark filtering
+- **Configurable**: Can be disabled entirely or per-feature if performance is a concern
 - **State Model**: `[position, velocity]` with constant velocity assumption
 
 ## 2. System Architecture
