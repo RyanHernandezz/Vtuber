@@ -60,7 +60,7 @@ Vtuber/
 
 ### Core Tracking
 - **Real-time face tracking** using MediaPipe (468 landmarks)
-- **Commercial-grade stability** with advanced Kalman filtering:
+- **Advanced stability** with enhanced Kalman filtering:
   - Per-landmark confidence weighting based on velocity
   - Region-based smoothing (stable anchors vs expressive features)
   - Outlier detection and rejection

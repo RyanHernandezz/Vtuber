@@ -16,7 +16,7 @@
 - **Processing**: Runs asynchronously at ~10 FPS in separate thread
 - **Calibration**: Neutral baseline compensation system subtracts user-specific bias
 
-### 1.3 Advanced Kalman Filtering (Commercial-Grade)
+### 1.3 Advanced Kalman Filtering
 - **Algorithm**: Enhanced 1D Kalman filter with confidence weighting
 - **Features**:
   - **Per-landmark confidence scoring**: Velocity-based confidence (fast movement = low confidence)
@@ -88,7 +88,7 @@ Vtuber/
 │   ├── landmarks.py        # EAR, MAR, yaw, pitch, tongue extraction
 │   ├── emotion.py          # DeepFace emotion detection with calibration
 │   ├── kalman.py           # Basic Kalman filter implementation
-│   ├── advanced_kalman.py  # Commercial-grade Kalman with confidence weighting
+│   ├── advanced_kalman.py  # Advanced Kalman with confidence weighting
 │   └── drawing.py          # Normalization and visualization
 ├── utils/
 │   └── math_utils.py       # Math helper functions
@@ -136,7 +136,7 @@ Vtuber/
 
 ### 4.2 Noise Reduction
 
-**Advanced Landmark Tracking** (Commercial-Grade):
+**Advanced Landmark Tracking**:
 - **Per-landmark confidence**: `confidence = 1.0 / (1.0 + velocity)`
   - Fast-moving landmarks (noise) → low confidence
   - Stable landmarks (anchors) → high confidence
@@ -219,7 +219,7 @@ Vtuber/
 
 ## 6. Advanced Tracking Configuration
 
-All commercial-grade tracking features are configurable in `config.py`:
+All advanced tracking features are configurable in `config.py`:
 
 ### Master Toggle
 ```python
@@ -256,7 +256,7 @@ EXPRESSIVE_REGION_WEIGHT = 0.2      # Smoothing for expressive features
 ## 8. Summary
 
 **Deep Learning Models**: MediaPipe Face Mesh (468 landmarks), DeepFace (emotion classification)
-**Advanced Tracking**: Commercial-grade Kalman filtering with confidence weighting, outlier rejection, velocity clamping
+**Advanced Tracking**: Enhanced Kalman filtering with confidence weighting, outlier rejection, velocity clamping
 **Algorithms**: Kalman filtering, EMA smoothing, hysteresis logic, delta-based calibration
 **Performance**: ~25-30 FPS with advanced tracking, ~10 FPS emotion detection, <100ms latency
 **Integration**: Real-time WebSocket communication with VTube Studio for live avatar animation
