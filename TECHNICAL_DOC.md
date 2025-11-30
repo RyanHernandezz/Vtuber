@@ -249,7 +249,6 @@ EXPRESSIVE_REGION_WEIGHT = 0.2      # Smoothing for expressive features
 ## 7. Limitations
 
 - **Calibration Requirement**: The neutral calibration step assumes the user can remain still for 2 seconds at startup. Accuracy may be affected if calibration is interrupted.
-- **Performance Impact**: Advanced tracking adds 2-5 FPS overhead due to processing 468 landmarks. Can be disabled if needed.
 - **Parameter Support**: The system outputs all landmark-derived facial features, but VTube Studio model compatibility varies. Some models may not support all parameters (e.g., TongueOut, Fear expression).
 - **Model Dependencies**: Different VTube Studio models use different parameter names. Users must configure parameter mappings in `config.py` to match their specific model.
 
@@ -258,7 +257,7 @@ EXPRESSIVE_REGION_WEIGHT = 0.2      # Smoothing for expressive features
 **Deep Learning Models**: MediaPipe Face Mesh (468 landmarks), DeepFace (emotion classification)
 **Advanced Tracking**: Enhanced Kalman filtering with confidence weighting, outlier rejection, velocity clamping
 **Algorithms**: Kalman filtering, EMA smoothing, hysteresis logic, delta-based calibration
-**Performance**: ~25-30 FPS with advanced tracking, ~10 FPS emotion detection, <100ms latency
+**Performance**: Real-time processing with FPS counter for monitoring, ~10 FPS emotion detection, <100ms latency
 **Integration**: Real-time WebSocket communication with VTube Studio for live avatar animation
 **Calibration**: Delta-based neutral baseline calibration for personalized emotion detection
 **User Interface**: Modern PySide6 GUI with FPS counter, clean expression bars, and calibration flow
