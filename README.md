@@ -2,6 +2,10 @@
 
 A real-time VTuber avatar system that converts facial expressions into animated character movements using MediaPipe face detection and DeepFace emotion recognition. The system processes real-time video to extract emotional cues and facial movements, then sends the data to VTube Studio via WebSocket API for Live2D avatar control.
 
+## Presentation & Demo
+
+[![Watch the Presentation & Demo](https://img.shields.io/badge/Watch-Presentation_%26_Demo-red?style=for-the-badge&logo=youtube)](https://drive.google.com/file/d/1oqyNTWql2j57wjekeoORraIBYwqycN1V/view?usp=drive_link)
+
 ## Requirements
 
 - **Python 3.9 - 3.12** (tested on Python 3.12.7)
