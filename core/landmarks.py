@@ -1,4 +1,5 @@
 from utils.math_utils import euclid
+import math
 
 def ears_from_landmarks(pts):
     def pick(i): return pts[i]
@@ -31,8 +32,23 @@ def yaw_pitch_proxy(pts):
     w = (x_max - x_min) + 1e-8
     h = (y_max - y_min) + 1e-8
     yaw = (nx - cx) / w
+    yaw = (nx - cx) / w
     pitch = (cy - ny) / h
-    return yaw, pitch
+    
+    # Roll (AngleZ)
+    # Left Eye Outer: 133, Right Eye Outer: 263
+    l_outer = pts[133]
+    r_outer = pts[263]
+    
+    # Vector from Left Eye to Right Eye (points to positive X)
+    # This ensures angle is 0 when head is upright
+    dx = r_outer[0] - l_outer[0]
+    dy = r_outer[1] - l_outer[1]
+    
+    # Angle in degrees
+    roll = math.degrees(math.atan2(dy, dx))
+    
+    return yaw, pitch, roll
 
 def tongue_from_landmarks(pts):
     """Calculate tongue out value from MediaPipe landmarks.
@@ -62,6 +78,49 @@ def tongue_from_landmarks(pts):
     
     return max(0.0, tongue_ratio)  # Clamp to 0 (tongue in) or positive (tongue out)
 
+def pupil_from_landmarks(pts):
+    """Calculate pupil position (X, Y) relative to eye center.
+    Returns:
+        pupil_x: -1.0 (left) to 1.0 (right)
+        pupil_y: -1.0 (up) to 1.0 (down)
+    """
+    def pick(i): return pts[i]
+    
+    # Left Eye (Subject's Left)
+    # Corners: 33 (inner), 133 (outer)
+    # Right Eye (Subject's Right)
+    # Corners: 362 (inner), 263 (outer)
+    
+    # Iris indices: 468 (Left), 473 (Right)
+    
+    try:
+        l_iris = pick(468)
+        r_iris = pick(473)
+    except IndexError:
+        return 0.0, 0.0
+        
+    # Helper to get relative pos
+    def get_rel_pos(iris, inner, outer):
+        # Vector from inner to outer
+        eye_width = euclid(inner, outer) + 1e-8
+        # Project iris onto eye vector? Or just simple interpolation
+        # Simple linear interpolation for X
+        # Center of eye
+        center = ((inner[0] + outer[0])/2, (inner[1] + outer[1])/2)
+        dx = (iris[0] - center[0]) / (eye_width / 2) # Normalize to -1..1
+        dy = (iris[1] - center[1]) / (eye_width / 4) # Height is smaller, approx
+        return dx, dy
+
+    lx, ly = get_rel_pos(l_iris, pick(33), pick(133)) # Left eye
+    rx, ry = get_rel_pos(r_iris, pick(362), pick(263)) # Right eye
+    
+    # Average pupil position
+    avg_x = (lx + rx) / 2.0
+    avg_y = (ly + ry) / 2.0
+    
+    # Clamp
+    return max(-1.0, min(1.0, avg_x)), max(-1.0, min(1.0, avg_y))
+
 def compute_expression_features(pts_norm):
     """Compute MediaPipe-based expression features from landmarks.
     
@@ -79,8 +138,9 @@ def compute_expression_features(pts_norm):
     """
     ear_left, ear_right = ears_from_landmarks(pts_norm)
     mar = mar_from_landmarks(pts_norm)
-    yaw, pitch = yaw_pitch_proxy(pts_norm)
+    yaw, pitch, roll = yaw_pitch_proxy(pts_norm)
     tongue = tongue_from_landmarks(pts_norm)
+    pupil_x, pupil_y = pupil_from_landmarks(pts_norm)
     
     return {
         'ear_left': ear_left,
@@ -88,7 +148,10 @@ def compute_expression_features(pts_norm):
         'mar': mar,
         'yaw': yaw,
         'pitch': pitch,
-        'tongue': tongue
+        'roll': roll,
+        'tongue': tongue,
+        'pupil_x': pupil_x,
+        'pupil_y': pupil_y
     }
 
 def mp_features_relative(mp_feats, mp_baseline):

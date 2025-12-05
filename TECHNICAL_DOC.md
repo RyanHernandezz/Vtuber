@@ -46,9 +46,14 @@ Webcam → MediaPipe (Landmarks) → Feature Extraction → Kalman Filtering
 ```
 
 ### 2.1 Component Breakdown
+**Camera Architecture (Producer-Consumer)**:
+- **Camera Manager**: Dedicated worker thread handling "OPEN"/"CLOSE" commands sequentially.
+- **Camera Read Loop**: Separate thread for reading frames, pushing to a non-blocking queue.
+- **Run ID System**: Atomic integer to invalidate old loops immediately on state change.
+- **Frame Queue**: Size-1 queue to decouple camera I/O from main processing.
 
 **Main Thread (main.py)**: 
-- Video capture at ~30 FPS
+- Consumes frames from `frame_queue`
 - MediaPipe landmark extraction (468 landmarks)
 - **Advanced tracking**: Per-landmark Kalman filtering with confidence weighting
 - Geometric feature calculation (EAR, MAR, yaw, pitch, tongue)
@@ -129,10 +134,11 @@ Vtuber/
 ## 4. Technical Implementation
 
 ### 4.1 Performance Optimization
-- Multi-threading: Emotion detection in separate thread to avoid blocking video pipeline
-- Change thresholds: Parameters only sent when change exceeds threshold (reduces unnecessary updates)
-- ROI extraction: Only face region sent to DeepFace (resized to 224x224 for optimal performance)
-- Aggressive bounding box expansion: Captures full face including forehead, temples, and jawline for better emotion detection
+- **Producer-Consumer Architecture**: Decouples camera I/O from inference, preventing UI freezes.
+- **Multi-threading**: Emotion detection and camera reading in separate threads.
+- **Change thresholds**: Parameters only sent when change exceeds threshold (reduces unnecessary updates).
+- **ROI extraction**: Only face region sent to DeepFace (resized to 224x224 for optimal performance).
+- **Aggressive bounding box expansion**: Captures full face including forehead, temples, and jawline for better emotion detection.
 
 ### 4.2 Noise Reduction
 

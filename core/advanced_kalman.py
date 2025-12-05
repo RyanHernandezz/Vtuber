@@ -1,7 +1,7 @@
 """
-Advanced Kalman filtering for commercial-grade facial landmark tracking.
+Advanced Kalman filtering for robust facial landmark tracking.
 
-This module implements professional-grade tracking techniques used in commercial VTuber software:
+This module implements high-quality tracking techniques used in professional VTuber software:
 - Per-landmark confidence weighting based on velocity
 - Outlier detection and rejection
 - Region-based smoothing (stable anchors vs expressive features)
@@ -73,7 +73,7 @@ class AdvancedKalmanFilter:
     """
     Enhanced Kalman filter with confidence weighting and outlier rejection.
     
-    This is the core of commercial-grade tracking stability.
+    This is the core of robust tracking stability.
     """
     
     def __init__(self, x0: float = 0.0, v0: float = 0.0, dt: float = 1.0/30.0,

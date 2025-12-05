@@ -2,14 +2,38 @@ import json
 import threading
 import time
 from pathlib import Path
+from config import MEDIAPIPE_CAPABILITIES
 
 try:
     import websocket  # type: ignore
 except ImportError:  # pragma: no cover
     websocket = None
 
+def load_vts_model_params(path):
+    try:
+        with open(path, "r", encoding="utf8") as f:
+            data = json.load(f)
+        # Collect 'Input' parameter names, as these are the tracking parameters we inject into
+        return {p["Input"] for p in data.get("Parameters", []) if p.get("Input")}
+    except Exception as e:
+        print(f"[WARN] Failed to load VTS model params from {path}: {e}")
+        return set()
+
+def filter_params(params, model_params):
+    filtered = {}
+    for k, v in params.items():
+        if model_params and k not in model_params:
+            # Only warn if we actually loaded model params
+            print(f"[WARN] VTS model does not have param: {k}")
+            continue
+        if k not in MEDIAPIPE_CAPABILITIES:
+            print(f"[WARN] Mediapipe cannot produce param: {k}")
+            continue
+        filtered[k] = v
+    return filtered
+
 class VTubeStudioClient:
-    def __init__(self, url="ws://localhost:8001"):
+    def __init__(self, url="ws://localhost:8001", model_config_path=None):
         self.url = url
         self.ws = None
         self.connected = False
@@ -19,44 +43,70 @@ class VTubeStudioClient:
         self.request_id_counter = 0
         self.lock = threading.Lock()
         self._load_token()
-        self._last_param_log = 0.0
-        self._reported_errors = set()
-        self._last_error_log = 0.0
-        self._pending_request = None
-        self._input_params_result = None
         
+        # Load model parameters if path provided
+        self.model_params = set()
+        if model_config_path:
+            self.model_params = load_vts_model_params(model_config_path)
+            print(f"Loaded {len(self.model_params)} parameters from model config.")
+
     def connect(self):
         """Establish WebSocket connection"""
         if websocket is None:
             raise ImportError("websocket-client package is not installed")
         try:
+            # Define callbacks
+            def on_open(ws):
+                print("\n[CONNECTED → VTS]\n")
+                self.connected = True
+                if self.auth_token:
+                    self._authenticate()
+                else:
+                    self._request_token()
+
+            def on_message(ws, message):
+                print("\n===== INBOUND ← VTS =====")
+                try:
+                    obj = json.loads(message)
+                    print(json.dumps(obj, indent=2))
+                    self._handle_message(obj)
+                except Exception as e:
+                    print(f"Raw message: {message}")
+                    print(f"Error parsing JSON: {e}")
+                print("=========================\n")
+
+            def on_error(ws, error):
+                print("\n[ERROR ← VTS]")
+                print(error)
+                print("================\n")
+
+            def on_close(ws, code, msg):
+                print("\n[DISCONNECTED ← VTS]")
+                print("Code:", code, "Msg:", msg)
+                print("=======================\n")
+                self.connected = False
+                self.authenticated = False
+
             self.ws = websocket.WebSocketApp(
                 self.url,
-                on_open=self._on_open,
-                on_message=self._on_message,
-                on_error=self._on_error,
-                on_close=self._on_close
+                on_open=on_open,
+                on_message=on_message,
+                on_error=on_error,
+                on_close=on_close
             )
+            
             wst = threading.Thread(target=self.ws.run_forever)
             wst.daemon = True
             wst.start()
             time.sleep(1)
-            return self.connected
+            return True
         except Exception as e:
             print(f"VTube Studio connection error: {e}")
             return False
-    
-    def _on_open(self, ws):
-        self.connected = True
-        print("Connected to VTube Studio")
-        if self.auth_token:
-            self._authenticate()
-        else:
-            self._request_token()
-    
-    def _on_message(self, ws, message):
+
+    def _handle_message(self, data):
+        """Internal message handler for logic (auth, etc.)"""
         try:
-            data = json.loads(message)
             message_type = data.get("messageType")
             
             if message_type == "AuthenticationResponse":
@@ -87,41 +137,10 @@ class VTubeStudioClient:
                     self._save_token(token)
                     print("Received new VTube Studio auth token, authenticating...")
                     self._authenticate()
-                else:
-                    print("VTube Studio: token response missing token field")
-            elif message_type == "InputParameterListResponse":
-                param_list = self._handle_input_parameter_list(data.get("data", {}))
-                if param_list:
-                    print(f"VTube Studio available parameters: {', '.join(param_list[:10])}{'...' if len(param_list) > 10 else ''}")
-            elif message_type == "APIError":
-                error_data = data.get("data", {})
-                error_msg = error_data.get("message", "Unknown error")
-                now = time.time()
-                if "Parameter" in error_msg and "not found" in error_msg:
-                    if error_msg not in self._reported_errors:
-                        self._reported_errors.add(error_msg)
-                        print(f"VTube Studio API error: {error_msg}")
-                        print("  (This error will not be shown again)")
-                    elif now - self._last_error_log >= 30.0:
-                        print(f"VTube Studio: Still receiving parameter errors. Check your model's tracking parameters.")
-                        self._last_error_log = now
-                else:
-                    print(f"VTube Studio API error: {error_msg}")
-        except json.JSONDecodeError:
-            print(f"VTube Studio: Failed to parse message: {message}")
         except Exception as e:
-            print(f"VTube Studio message handler error: {e}")
-    
-    def _on_error(self, ws, error):
-        print(f"VTube Studio error: {error}")
-    
-    def _on_close(self, ws, close_status_code, close_msg):
-        self.connected = False
-        self.authenticated = False
-        print("VTube Studio disconnected")
-    
+            print(f"Error in _handle_message: {e}")
+
     def _request_token(self):
-        """Ask VTube Studio for an authentication token (only required once)."""
         with self.lock:
             request_id = f"token_{self.request_id_counter}"
             self.request_id_counter += 1
@@ -140,7 +159,6 @@ class VTubeStudioClient:
         self._send(msg)
 
     def _authenticate(self):
-        """Send authentication request"""
         with self.lock:
             request_id = f"auth_{self.request_id_counter}"
             self.request_id_counter += 1
@@ -154,7 +172,7 @@ class VTubeStudioClient:
                 "pluginName": "VTuber Face Tracker",
                 "pluginDeveloper": "YourName",
                 "pluginIcon": None,
-                "authenticationToken": self.auth_token  # Include token if re-authenticating
+                "authenticationToken": self.auth_token
             }
         }
         self._send(msg)
@@ -176,74 +194,75 @@ class VTubeStudioClient:
             print(f"Warning: Failed to save VTube Studio token: {e}")
     
     def _send(self, message):
-        """Send JSON message"""
+        """Send JSON message with logging"""
         if self.ws and self.connected:
             try:
                 json_str = json.dumps(message)
+                
+                print("\n===== OUTBOUND → VTS =====")
+                print(json.dumps(message, indent=2))
+                print("==========================\n")
+                
                 self.ws.send(json_str)
-            except websocket.WebSocketConnectionClosedException:
-                print("VTube Studio: Connection closed")
-                self.connected = False
             except Exception as e:
                 print(f"VTube Studio send error: {e}")
-    
+
     def send_parameters(self, parameters):
-        """Send input parameter data to VTube Studio"""
+        """Send input parameter data to VTube Studio with filtering and debug"""
         if not (self.connected and self.authenticated):
             return
         
-        # Build parameter list with proper format
-        param_list = []
-        for name, value in parameters.items():
-            # Ensure value is a float
-            try:
-                float_value = float(value)
-                param_list.append({
-                    "id": name,  # VTube Studio uses "id" not "name"
-                    "value": float_value
-                })
-            except (ValueError, TypeError):
-                print(f"Warning: Invalid parameter value for {name}: {value}")
-                continue
+        filtered = filter_params(parameters, self.model_params)
         
-        if not param_list:
+        if not filtered:
             return
-        
+
         with self.lock:
             request_id = f"param_{self.request_id_counter}"
             self.request_id_counter += 1
         
-        msg = {
+        # The "100% Guaranteed" Fix: Explicitly filter bad entries
+        final_values = []
+        for k, v in filtered.items():
+            # Check for None or empty string keys
+            if k is None or k == "":
+                print(f"[BAD ENTRY DETECTED] Key is None/Empty. Value: {v}")
+                continue
+            
+            entry = {"id": k, "value": float(v)}
+            
+            # Double check the entry object itself
+            if not entry["id"] or entry["id"] is None:
+                print("[BAD ENTRY DETECTED]", entry)
+                continue
+                
+            final_values.append(entry)
+
+        packet = {
             "apiName": "VTubeStudioPublicAPI",
             "apiVersion": "1.0",
             "requestID": request_id,
             "messageType": "InjectParameterDataRequest",
             "data": {
                 "faceFound": True,
-                "parameterValues": param_list
+                "mode": "set",
+                "parameterValues": final_values
             }
         }
         
-        self._send(msg)
-        now = time.time()
-        if now - self._last_param_log >= 5.0:
-            print(f"Sent {len(param_list)} params to VTube Studio")
-            self._last_param_log = now
-    
+        self._send(packet)
+
     def disconnect(self):
-        """Disconnect from VTube Studio"""
         if self.ws:
             try:
                 self.ws.close()
-            except Exception as e:
-                print(f"Error disconnecting from VTube Studio: {e}")
+            except Exception:
+                pass
             finally:
                 self.connected = False
                 self.authenticated = False
-                self.auth_token = None
 
     def trigger_expression(self, expression_file):
-        """Trigger an expression in VTube Studio"""
         if not (self.connected and self.authenticated):
             return False
         
@@ -261,12 +280,10 @@ class VTubeStudioClient:
                 "active": True
             }
         }
-
         self._send(msg)
         return True
     
     def deactivate_expression(self, expression_file):
-        """Deactivate an expression in VTube Studio"""
         if not (self.connected and self.authenticated):
             return False
         
@@ -284,37 +301,5 @@ class VTubeStudioClient:
                 "active": False
             }
         }
-
         self._send(msg)
         return True
-    
-    def get_input_parameters(self):
-        """Query available input parameters from VTube Studio"""
-        if not (self.connected and self.authenticated):
-            return None
-        
-        with self.lock:
-            request_id = f"get_params_{self.request_id_counter}"
-            self.request_id_counter += 1
-        
-        msg = {
-            "apiName": "VTubeStudioPublicAPI",
-            "apiVersion": "1.0",
-            "requestID": request_id,
-            "messageType": "InputParameterListRequest",
-            "data": {}
-        }
-        
-        self._pending_request = request_id
-        self._input_params_result = None
-        
-        self._send(msg)
-        time.sleep(0.5)
-        return self._input_params_result
-    
-    def _handle_input_parameter_list(self, data):
-        """Handle InputParameterListResponse"""
-        parameters = data.get("defaultParameters", []) + data.get("customParameters", [])
-        param_names = [p.get("name") for p in parameters if p.get("name")]
-        self._input_params_result = param_names
-        return param_names

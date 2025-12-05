@@ -82,7 +82,9 @@ Vtuber/
 - **Live video feed** with emotion-colored border
 - **Expression indicators** with percentage values (mouth, eyes, head pose)
 - **Calibration progress** with visual feedback
-- Frameless, always-on-top window with drag support
+- **Camera Toggle** with responsive control and "Webcam OFF" visual
+- **VTube Studio Status** indicator (connected/disconnected)
+- **Frameless, always-on-top window** with drag support
 
 ## Controls
 
@@ -206,6 +208,14 @@ The application features a modern, minimal GUI built with PySide6:
 - **Dark monochrome design** with emotion-specific accent colors
 - **Frameless window** - always on top, draggable
 - **Rounded corners** - modern, polished look
+
+### Camera Controls
+- **Camera Toggle Button**: Turns the camera on/off.
+  - **OFF State**: Shows a black screen with "Webcam OFF" text.
+  - **ON State**: Shows the live video feed.
+- **VTube Studio Status**:
+  - **Green Dot**: Connected to VTube Studio.
+  - **Grey Dot**: Disconnected.
 
 The GUI replaces all console output with visual feedback. Debug information still prints to the console for troubleshooting.
 

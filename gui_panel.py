@@ -220,6 +220,14 @@ class VideoDisplay(QLabel):
         self._border_animation_b = QPropertyAnimation(self, b"borderBlue")
         self._border_animation_b.setDuration(150)
         self._border_animation_b.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        
+        self._camera_active = True
+        
+    def setCameraActive(self, active):
+        self._camera_active = active
+        if not active:
+            self.clear()  # Clear current pixmap
+        self.update()
     
     def setBorderRed(self, value):
         self._border_red = int(value)
@@ -321,6 +329,18 @@ class VideoDisplay(QLabel):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.rect()
+        
+        if not self._camera_active:
+            # Draw black background
+            painter.fillRect(rect, Qt.black)
+            
+            # Draw "Webcam OFF" text
+            painter.setPen(QColor(122, 122, 133))
+            font = painter.font()
+            font.setPointSize(16)
+            font.setBold(True)
+            painter.setFont(font)
+            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "Webcam OFF")
         
         pen = QPen(self._border_color, 1)
         painter.setPen(pen)
@@ -438,6 +458,7 @@ class MainWindow(QMainWindow):
     """Main VTuber tracking UI window."""
     
     calibration_requested = Signal()
+    camera_toggled = Signal(bool)  # New signal: True=On, False=Off
     
     def __init__(self):
         super().__init__()
@@ -522,6 +543,38 @@ class MainWindow(QMainWindow):
         self.calibration_button.clicked.connect(self._on_calibration_clicked)
         panel_layout.addWidget(self.calibration_button)
         
+        # Camera Toggle button
+        self.camera_button = QPushButton("Camera: ON")
+        self.camera_button.setCheckable(True)
+        self.camera_button.setChecked(True)
+        self.camera_button.setStyleSheet("""
+            QPushButton {
+                background: #2a2b2e;
+                color: #d7d7e0;
+                border: 1px solid #3a3b3e;
+                border-radius: 6px;
+                padding: 10px;
+                font-size: 13px;
+                font-weight: 500;
+            }
+            QPushButton:hover {
+                background: #3a3b3e;
+                border-color: #4a4b4e;
+            }
+            QPushButton:checked {
+                background: #2a2b2e;
+                color: #7fffe1;
+                border-color: #7fffe1;
+            }
+            QPushButton:!checked {
+                background: #1a1b1e;
+                color: #ff6b6b;
+                border-color: #ff6b6b;
+            }
+        """)
+        self.camera_button.clicked.connect(self._on_camera_toggled)
+        panel_layout.addWidget(self.camera_button)
+        
         # Calibration widget
         self.calibration_widget = CalibrationWidget()
         panel_layout.addWidget(self.calibration_widget)
@@ -560,6 +613,26 @@ class MainWindow(QMainWindow):
             panel_layout.addWidget(bar)
         
         panel_layout.addStretch()
+        
+        # VTube Studio Status
+        self.vts_status_container = QWidget()
+        vts_layout = QHBoxLayout(self.vts_status_container)
+        vts_layout.setContentsMargins(0, 0, 0, 0)
+        vts_layout.setSpacing(8)
+        
+        self.vts_status_dot = QLabel()
+        self.vts_status_dot.setFixedSize(8, 8)
+        self.vts_status_dot.setStyleSheet("background: #3a3b3e; border-radius: 4px;")
+        
+        self.vts_status_label = QLabel("VTube Studio")
+        self.vts_status_label.setStyleSheet("color: #7a7a85; font-size: 11px;")
+        
+        vts_layout.addWidget(self.vts_status_dot)
+        vts_layout.addWidget(self.vts_status_label)
+        vts_layout.addStretch()
+        
+        panel_layout.addWidget(self.vts_status_container)
+        
         main_layout.addWidget(panel)
         
         # Emotion color mapping
@@ -582,13 +655,76 @@ class MainWindow(QMainWindow):
         # FPS tracking
         self._fps_history = []
         self._last_fps_update = 0
+        
+        self.calibration_active = False
     
     def _on_calibration_clicked(self):
         """Handle calibration button click - start countdown."""
         self.calibration_button.setEnabled(False)
+        self.camera_button.setEnabled(False)
         self._countdown_value = 3
         self.calibration_widget.setCountdown(self._countdown_value)
         self._countdown_timer.start(1000)  # Update every second
+    
+    def _on_camera_toggled(self, checked):
+        """Handle camera toggle button click."""
+        if self.calibration_active:
+            # Prevent toggling during calibration
+            self.camera_button.setChecked(not checked) # Revert state
+            return
+
+        if checked:
+            self.camera_button.setText("Camera: ON")
+            self.camera_button.setStyleSheet("""
+                QPushButton {
+                    background: #2a2b2e;
+                    color: #d7d7e0;
+                    border: 1px solid #3a3b3e;
+                    border-radius: 6px;
+                    padding: 10px;
+                    font-size: 13px;
+                    font-weight: 500;
+                }
+                QPushButton:hover {
+                    background: #3a3b3e;
+                    border-color: #4a4b4e;
+                }
+                QPushButton:checked {
+                    background: #2a2b2e;
+                    color: #7fffe1;
+                    border-color: #7fffe1;
+                }
+            """)
+        else:
+            self.camera_button.setText("Camera: OFF")
+            self.camera_button.setStyleSheet("""
+                QPushButton {
+                    background: #1a1b1e;
+                    color: #ff6b6b;
+                    border: 1px solid #ff6b6b;
+                    border-radius: 6px;
+                    padding: 10px;
+                    font-size: 13px;
+                    font-weight: 500;
+                }
+                QPushButton:hover {
+                    background: #2a2b2e;
+                    border-color: #ff8888;
+                }
+            """)
+        self.camera_toggled.emit(checked)
+        self.video_display.setCameraActive(checked)
+        
+    def set_vts_status(self, connected):
+        """Update VTube Studio connection status indicator."""
+        if connected:
+            self.vts_status_dot.setStyleSheet("background: #7fffe1; border-radius: 4px;")  # Green
+            self.vts_status_label.setText("VTube Studio: Connected")
+            self.vts_status_label.setStyleSheet("color: #d7d7e0; font-size: 11px;")
+        else:
+            self.vts_status_dot.setStyleSheet("background: #3a3b3e; border-radius: 4px;")  # Grey
+            self.vts_status_label.setText("VTube Studio: Disconnected")
+            self.vts_status_label.setStyleSheet("color: #7a7a85; font-size: 11px;")
     
     def _countdown_tick(self):
         """Handle countdown timer tick."""
@@ -599,8 +735,9 @@ class MainWindow(QMainWindow):
             self._countdown_timer.stop()
             self.calibration_widget.setCountdown(0)
             self.calibration_requested.emit()
-            # Re-enable button after calibration completes
-            QTimer.singleShot(3000, lambda: self.calibration_button.setEnabled(True))
+            # Re-enable button is handled by update_calibration completion
+            # QTimer.singleShot(3000, lambda: self.calibration_button.setEnabled(True))
+            # QTimer.singleShot(3000, lambda: self.calibration_button.setEnabled(True))
     
     def update_frame(self, frame_rgb):
         """Update video frame display."""
@@ -695,6 +832,15 @@ class MainWindow(QMainWindow):
             self.calibration_widget.updateProgress(elapsed, duration)
         else:
             self.calibration_widget.setReady()
+            self.calibration_button.setEnabled(True)
+            self.camera_button.setEnabled(True)
+            
+    def set_camera_button_enabled(self, enabled):
+        """Enable or disable the camera toggle button."""
+        self.camera_button.setEnabled(enabled)
+        self.calibration_active = not enabled
+        
+
     
 
 class VTuberGUI:
@@ -749,6 +895,11 @@ class VTuberGUI:
         """Update calibration progress."""
         if self.window:
             self.window.update_calibration(elapsed, duration)
+            
+    def set_camera_button_enabled(self, enabled):
+        """Enable or disable camera button."""
+        if self.window:
+            self.window.set_camera_button_enabled(enabled)
     
     def process_events(self):
         """Process Qt events (call in main loop)."""

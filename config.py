@@ -35,14 +35,35 @@ PARAM_THRESHOLDS = {
     'tongue': 0.02,
 }
 
-VTUBE_STUDIO_PARAMS = {
-    'EyeOpenLeft': 'EyeOpenLeft',
-    'EyeOpenRight': 'EyeOpenRight',
-    'MouthOpen': 'MouthOpen',
-    'AngleX': 'AngleX',
-    'AngleY': 'AngleY',
-    'AngleZ': 'AngleZ',
-    'TongueOut': 'TongueOut',
+# ============================================================================
+# DYNAMIC PARAM ROUTING SYSTEM
+# ============================================================================
+
+# Mediapipe Capability Whitelist
+MEDIAPIPE_CAPABILITIES = {
+    "EyeOpenLeft",
+    "EyeOpenRight",
+    "MouthOpen",
+    "FaceAngleX",
+    "FaceAngleY",
+    "FaceAngleZ",
+    "EyeRightX",
+    "EyeRightY"
+}
+
+# Map Live2D param → (mp_feature_key, scale, invert)
+# scale = multiply feature value
+# invert = reverse sign (optional)
+
+VTS_PARAM_MAP = {
+    "EyeOpenLeft":  ("ear_left", 1.0, False),
+    "EyeOpenRight": ("ear_right", 1.0, False),
+    "MouthOpen":    ("mar", 1.0, False),
+    "FaceAngleX":   ("yaw", 100.0, False),
+    "FaceAngleY":   ("pitch", 100.0, False),
+    "FaceAngleZ":   ("roll", 1.0, False),
+    "EyeRightX":    ("pupil_x", 1.0, False),
+    "EyeRightY":    ("pupil_y", 1.0, False),
 }
 
 EMOTION_EXPRESSIONS = {
@@ -56,11 +77,11 @@ EMOTION_EXPRESSIONS = {
 }
 
 # ============================================================================
-# ADVANCED TRACKING SETTINGS (Commercial-Grade Stability)
+# ADVANCED TRACKING SETTINGS (High-Quality Stability)
 # ============================================================================
 
 # Master toggle for advanced tracking features
-USE_ADVANCED_TRACKING = True  # Enable commercial-grade landmark tracking
+USE_ADVANCED_TRACKING = True  # Enable advanced landmark tracking
 
 # Individual feature toggles (only apply if USE_ADVANCED_TRACKING = True)
 CONFIDENCE_WEIGHTING = True   # Use velocity-based confidence scoring
@@ -70,10 +91,10 @@ REGION_SMOOTHING = True       # Apply region-based smoothing weights
 
 # Confidence weighting parameters
 MIN_CONFIDENCE = 0.1          # Minimum confidence value (0.0 to 1.0)
-VELOCITY_CONFIDENCE_SCALE = 0.05  # Lower = more sensitive to velocity changes
+VELOCITY_CONFIDENCE_SCALE = 0.03  # Lower = more sensitive to velocity changes
 
 # Outlier detection
-OUTLIER_THRESHOLD = 0.05      # Distance threshold for outlier detection (normalized coords)
+OUTLIER_THRESHOLD = 0.1      # Distance threshold for outlier detection (normalized coords)
                               # Increase to reject fewer outliers, decrease to be more strict
 
 # Velocity clamping
