@@ -97,7 +97,9 @@ Vtuber/
 
 ## Documentation
 
-For detailed technical documentation including deep learning models, architecture, and code explanations, see [TECHNICAL_DOC.md](TECHNICAL_DOC.md).
+- **[Presentation Slides (PDF)](docs/Presentation_Slides.pdf)**: Overview of the project, problem definition, and solution.
+- **[Final Report - Phase 4 (PDF)](docs/CECS_458_Phase_4_Report.pdf)**: Comprehensive report covering system architecture, evaluation, and business impact.
+- **[Technical Documentation](docs/Technical_Documentation.md)**: Detailed technical deep-dive into the models, algorithms, and code structure.
 
 ## VTube Studio Setup
 
