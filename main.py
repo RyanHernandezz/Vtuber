@@ -172,7 +172,6 @@ def main():
         current_time = time.time()
         
         # FPS Calculation
-        # frame_count += 1 (Moved to after frame retrieval)
         if current_time - fps_update_time >= 1.0:
             fps = frame_count / (current_time - fps_update_time)
             gui.update_fps(fps)
@@ -264,14 +263,6 @@ def main():
                         value = -value
 
                     params[param_name] = float(value)
-
-                # Debug: Log params every 1 second
-                if 'last_vts_print' not in locals():
-                    last_vts_print = 0
-                if time.time() - last_vts_print > 1.0:
-                    print("RAW PARAM KEYS:", list(params.keys()))
-                    print(f"[VTS Send] {params}")
-                    last_vts_print = time.time()
 
                 vts_client.send_parameters(params)
             

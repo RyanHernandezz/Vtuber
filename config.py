@@ -51,7 +51,7 @@ MEDIAPIPE_CAPABILITIES = {
     "EyeRightY"
 }
 
-# Map Live2D param → (mp_feature_key, scale, invert)
+# Map Live2D param -> (mp_feature_key, scale, invert)
 # scale = multiply feature value
 # invert = reverse sign (optional)
 
